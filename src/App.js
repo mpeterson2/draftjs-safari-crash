@@ -1,25 +1,46 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { Component } from "react";
+import { Editor, Modifier, EditorState } from "draft-js";
+import getEntityKeyForSelection from "draft-js/lib/getEntityKeyForSelection";
+import "./App.css";
 
 class App extends Component {
+  state = {
+    editorState: new EditorState.createEmpty()
+  };
+
+  handleBeforeInput = (character: string) => {
+    console.log("called", character);
+    const { editorState } = this.state;
+    const selectionState = editorState.getSelection();
+    const contentState = editorState.getCurrentContent();
+    const inlineStyle = editorState.getCurrentInlineStyle();
+    const entityKey = getEntityKeyForSelection(contentState, selectionState);
+    const newContentState = Modifier.insertText(
+      contentState,
+      selectionState,
+      character,
+      inlineStyle,
+      entityKey
+    );
+    const newEditorState = EditorState.push(
+      editorState,
+      newContentState,
+      "insert-characters"
+    );
+    this.setState({ editorState: newEditorState });
+  };
+
+  handleChange = () => {};
+
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
+      <div className="app">
+        <Editor
+          className="editor"
+          editorState={this.state.editorState}
+          handleBeforeInput={this.handleBeforeInput}
+          onChange={this.handleChange}
+        />
       </div>
     );
   }
