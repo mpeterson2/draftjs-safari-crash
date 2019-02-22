@@ -1,54 +1,21 @@
 import React, { Component } from "react";
-import { Editor, Modifier, EditorState, SelectionState } from "draft-js";
-import getEntityKeyForSelection from "draft-js/lib/getEntityKeyForSelection";
+import { Editor, Modifier, EditorState } from "draft-js";
 import "./App.css";
 
-function updateContent(text, editorState, anchor, focus) {
-  let selectionState;
+function updateContent(text, editorState) {
   let contentState = editorState.getCurrentContent();
-  const currentBlock = contentState.getFirstBlock();
-  const currentText = currentBlock.getText();
-  if (typeof anchor === "number") {
-    if (anchor > currentText.length) {
-      anchor = currentText.length;
-    }
-    if (focus > currentText.length) {
-      focus = currentText.length;
-    }
-    selectionState = new SelectionState({
-      anchorKey: currentBlock.getKey(),
-      anchorOffset: anchor,
-      focusKey: currentBlock.getKey(),
-      focusOffset: focus || anchor
-    });
-  } else {
-    selectionState = editorState.getSelection();
-  }
+  const selectionState = editorState.getSelection();
+
   const inlineStyle = editorState.getCurrentInlineStyle();
-  const entityKey = getEntityKeyForSelection(contentState, selectionState);
 
-  let changeType;
-  if (selectionState.isCollapsed()) {
-    contentState = Modifier.insertText(
-      contentState,
-      selectionState,
-      text,
-      inlineStyle,
-      entityKey
-    );
-    changeType = "insert-characters";
-  } else {
-    contentState = Modifier.replaceText(
-      contentState,
-      selectionState,
-      text,
-      inlineStyle,
-      entityKey
-    );
-    changeType = "replace-characters";
-  }
+  contentState = Modifier.insertText(
+    contentState,
+    selectionState,
+    text,
+    inlineStyle
+  );
 
-  return EditorState.push(editorState, contentState, changeType);
+  return EditorState.push(editorState, contentState, "insert-characters");
 }
 
 class MyEditor extends Component {
