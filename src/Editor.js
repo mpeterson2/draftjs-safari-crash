@@ -3,15 +3,6 @@ import { Editor, Modifier, EditorState, SelectionState } from "draft-js";
 import getEntityKeyForSelection from "draft-js/lib/getEntityKeyForSelection";
 import "./App.css";
 
-const MAX_LENGTH = 512;
-
-function getFirstTextBlock(editorState) {
-  return editorState
-    .getCurrentContent()
-    .getFirstBlock()
-    .getText();
-}
-
 function updateContent(text, editorState, anchor, focus) {
   let selectionState;
   let contentState = editorState.getCurrentContent();
@@ -60,100 +51,21 @@ function updateContent(text, editorState, anchor, focus) {
   return EditorState.push(editorState, contentState, changeType);
 }
 
-function truncateContent(editorState, maxLength = 512) {
-  const query = getFirstTextBlock(editorState);
-  if (query.length > maxLength) {
-    let selectionState = editorState.getSelection();
-    editorState = updateContent("", editorState, maxLength, query.length);
-    // Adapt the old selection selection after truncation
-    if (selectionState.getAnchorOffset() > maxLength) {
-      selectionState = selectionState.set("anchorOffset", maxLength);
-    }
-    if (selectionState.getFocusOffset() > maxLength) {
-      selectionState = selectionState.set("focusOffset", maxLength);
-    }
-    editorState = EditorState.forceSelection(editorState, selectionState);
-  }
-  return editorState;
-}
-
-function isContainedWithin(node, parentNode) {
-  while (node) {
-    if (node === parentNode) {
-      return true;
-    }
-    node = node.parentNode;
-  }
-  return false;
-}
-
-function scrollCursorIntoView(editorEl) {
-  const selection = window.getSelection();
-  // We should ONLY update Caret, i.e. Collapsed selections
-  if (!selection || selection.type !== "Caret" || !editorEl) {
-    return;
-  }
-  // We should only act on selections within our editor
-  const range = selection.getRangeAt(0);
-  if (!isContainedWithin(range.commonAncestorContainer, editorEl)) {
-    return;
-  }
-  const rangeRect = range.getClientRects()[0];
-  const editorRect = editorEl.getClientRects()[0];
-  if (!rangeRect || !editorRect) {
-    return;
-  }
-  // Calculate position of caret from getClientRects and ensure it's visible
-  const left = rangeRect.left - editorRect.left;
-  const scrollLeft = left + editorEl.scrollLeft;
-  if (scrollLeft < editorEl.scrollLeft) {
-    editorEl.scrollLeft = scrollLeft - 10;
-  } else if (scrollLeft > editorEl.scrollLeft + editorEl.offsetWidth) {
-    editorEl.scrollLeft = scrollLeft - editorEl.offsetWidth + 3;
-  }
-}
-
 class MyEditor extends Component {
-  componentDidUpdate(prevProps) {
-    const { editorState } = this.props;
-    if (editorState !== prevProps.editorState) {
-      if (this._editorRef) {
-        scrollCursorIntoView(this._editorRef.refs.editor);
-      }
-    }
-  }
-
-  setEditorState = editorState => {
-    this.props.setEditorState(editorState);
-  };
-
-  handleBeforeInput = (character: string) => {
-    let { editorState } = this.props;
-    const query = getFirstTextBlock(editorState);
-    if (query.length >= MAX_LENGTH) {
-      return true;
-    }
+  handleBeforeInput = character => {
+    let { editorState, setEditorState } = this.props;
     editorState = updateContent(character, editorState);
-    // Probs never needed, but here as a safety (i.e. if character ever
-    // happened to be more than 1 char)
-    editorState = truncateContent(editorState, MAX_LENGTH);
-    // editorState = this.tokenize(editorState);
-    this.setEditorState(editorState);
+    setEditorState(editorState);
     return true;
   };
 
-  handleChange = () => {};
-
   render() {
     return (
-      <div className="app">
-        <Editor
-          className="editor"
-          editorState={this.props.editorState}
-          handleBeforeInput={this.handleBeforeInput}
-          onChange={this.setEditorState}
-        />
-      </div>
+      <Editor
+        editorState={this.props.editorState}
+        handleBeforeInput={this.handleBeforeInput}
+        onChange={this.props.setEditorState}
+      />
     );
   }
 }
